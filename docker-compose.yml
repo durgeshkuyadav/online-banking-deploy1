@@ -1,0 +1,48 @@
+﻿version: "3.9"
+services:
+  db:
+    image: mysql:8
+    container_name: banking-db
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS}
+      MYSQL_DATABASE: ${DB_NAME}
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+  backend:
+    build: ./backend
+    container_name: banking-backend
+    restart: unless-stopped
+    depends_on:
+      - db
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/${DB_NAME}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${DB_ROOT_PASS}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+    expose:
+      - "8080"
+  frontend:
+    build: ./frontend
+    container_name: banking-frontend
+    restart: unless-stopped
+    expose:
+      - "80"
+  nginx:
+    build: ./nginx
+    container_name: banking-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - frontend
+      - backend
+volumes:
+  db_data:
